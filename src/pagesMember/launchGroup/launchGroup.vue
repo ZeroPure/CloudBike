@@ -1,16 +1,36 @@
 <script setup lang="ts">
 import { onLoad } from '@dcloudio/uni-app'
 import { ref } from 'vue'
+import { upload } from '@/services/upload'
+import { postApplyBikeGroupAPI } from '@/services/bikegroup'
+import type { uploadParams } from '@/services/upload'
+import type { ApplyBikeGroupParams } from '@/services/bikegroup'
 
 // 表单数据
-const form = ref({
-  title: '', //活动标题
-  position: '', //集合地点
-  time: '', //开始时间
-  number: '', //活动人数
+const form = ref<ApplyBikeGroupParams>({
+  name: '', //活动标题
+  meetingPoint: '', //集合地点
+  departureTime: '', //开始时间
   description: '', //活动描述
-
+  maxPeople: 0, //活动人数
+  images: Array<string>(), //图片数组
 })
+
+// 图片转云端
+const uploadImageCloud = async (params: uploadParams) => {
+  const response = await upload(params)
+  if(response && response.code === 1){
+    console.log('成功', response.data)
+    form.value.images.push(response.data)
+  }
+  else{
+    console.log('fail',response)
+  }
+
+}
+
+// 页面展示图片数组
+const localImages = ref<{ url: string }[]>([])
 
 //定义校验规则
 const rules = {
@@ -49,47 +69,51 @@ const rules = {
 }
 // 表单组件实例
 const formRef = ref<UniHelper.UniFormsInstance>()
-// 图片数组
-const images = ref<{ url: string }[]>([])
 
 // 提交表单
 const commit = async () => {
-  //表单校验
-  try {
-    await formRef.value?.validate()
-    console.log('提交成功', form.value)
-
+  console.log('表单信息:', form.value)
+  const response = await postApplyBikeGroupAPI(form.value)
+  console.log(response)
+  if (response && response.code === 1) {
+    uni.showToast({ icon: 'none', title: '发布成功' })
+    //成功后跳转到首页
     setTimeout(() => {
-      uni.navigateBack()
-    }, 400)
-  } catch (err) {
-    uni.showToast({ icon: 'error', title: '请填写完整信息' })
+      uni.switchTab({
+        url: '/pages/my/my',
+      })
+    },500)
+  } else {
+    uni.showToast({ icon: 'error', title: '发布失败' })
   }
 }
 
 // 上传图片
+// 上传图片并实时显示
 const uploadImage = () => {
   uni.chooseImage({
-    count: 3, // 允许选择最多3张图片
+    count: 3, // 最大选择数量
     sizeType: ['original', 'compressed'],
     sourceType: ['album', 'camera'],
-    success: (res) => {
-      console.log('选择图片', res.tempFilePaths);
-      // 将选中的图片添加到 images 数组中
-      if (Array.isArray(res.tempFilePaths)) {
-        res.tempFilePaths.forEach((path) => {
-          images.value.push({url: path})
-          console.log('上传成功', path)
-        })
+    success: async (res) => {
+      console.log('选择图片', res.tempFilePaths)
+
+      for (const path of res.tempFilePaths) {
+        try {
+          uploadImageCloud()
+          // form.value.images.push(path) // 添加到提交表单的图片数组
+          localImages.value.push({ url: path }) // 页面显示用
+        } catch (error) {
+          console.error('图片上传失败', error)
+          uni.showToast({ title: '图片上传失败', icon: 'error' })
+        }
       }
     },
     fail: () => {
-      uni.showToast({ icon: 'error', title: '图片上传失败' })
+      uni.showToast({ title: '图片选择失败', icon: 'error' })
     },
   })
 }
-
-//api 接口
 </script>
 
 <template>
@@ -97,16 +121,16 @@ const uploadImage = () => {
   <view class="content">
     <uni-forms :rules="rules" :model="form" ref="formRef">
       <uni-forms-item name="title" class="form-item">
-        <textarea class="input" placeholder="添加活动标题" v-model="form.title" />
+        <textarea class="input" placeholder="添加活动标题" v-model="form.name" />
       </uni-forms-item>
       <uni-forms-item name="position" class="form-item">
-        <textarea class="input" placeholder="添加集合地点" v-model="form.position" />
+        <textarea class="input" placeholder="添加集合地点" v-model="form.meetingPoint" />
       </uni-forms-item>
       <uni-forms-item name="time" class="form-item">
-        <textarea class="input" placeholder="活动开始时间" v-model="form.time" />
+        <textarea class="input" placeholder="活动开始时间(格式:2022-01-01 12:00:00)" v-model="form.departureTime" />
       </uni-forms-item>
       <uni-forms-item name="number" class="form-item">
-        <textarea class="input" placeholder="活动限制人数" v-model="form.number" />
+        <textarea class="input" placeholder="活动限制人数" v-model="form.maxPeople" />
       </uni-forms-item>
       <uni-forms-item name="description" class="form-item">
         <textarea class="input description" placeholder="描述一下活动" v-model="form.description" />
@@ -115,7 +139,7 @@ const uploadImage = () => {
   </view>
 
   <view class="commit-images">
-    <view v-for="(item, index) in images" :key="index" class="image-item">
+    <view v-for="(item, index) in localImages" :key="index" class="image-item">
       <image :src="item.url" class="image-preview"></image>
     </view>
   </view>
@@ -193,13 +217,13 @@ page {
   justify-content: center;
   width: 100%;
 }
-.image-preview{
+.image-preview {
   display: flex;
   flex-direction: row;
   align-items: center;
   justify-content: center;
-  width: 100rpx;
-  height:200rpx;
+  width: 200rpx;
+  height: 200rpx;
   margin: 0;
 }
 </style>

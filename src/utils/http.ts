@@ -12,7 +12,7 @@
 
 import { useMemberStore } from '@/stores'
 
-const baseURL = 'https://553f64f.r15.cpolar.top'
+const baseURL = 'http://76182e49.r15.cpolar.top'
 
 // 添加拦截器
 const httpInterceptor = {
@@ -32,8 +32,9 @@ const httpInterceptor = {
     // 4. 添加 token 请求头标识
     const memberStore = useMemberStore()
     const token = memberStore.profile?.token
+    //console.log('httpInterceptor token', token)
     if (token) {
-      options.header.Authorization = token
+      options.header.userToken = token
     }
   },
 }
@@ -54,9 +55,9 @@ uni.addInterceptor('uploadFile', httpInterceptor)
  *    3.3 网络错误 -> 提示用户换网络
  */
 type Data<T> = {
-  code: string
+  code: number
   msg: string
-  result: T
+  data: T
 }
 // 2.2 添加类型，支持泛型
 export const http = <T>(options: UniApp.RequestOptions) => {
@@ -89,7 +90,7 @@ export const http = <T>(options: UniApp.RequestOptions) => {
       fail(err) {
         uni.showToast({
           icon: 'none',
-          title: err.errMsg,
+          title: '网络错误，换个网络试试',
         })
         reject(err)
       },

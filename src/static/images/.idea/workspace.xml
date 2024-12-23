@@ -1,0 +1,70 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="ChangeListManager">
+    <list default="true" id="644a465a-551e-48b5-9a7c-4d551d3b92b9" name="Changes" comment="">
+      <change afterPath="$PROJECT_DIR$/icon.jpg" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../../pages.json" beforeDir="false" afterPath="$PROJECT_DIR$/../../pages.json" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../../pages/login/login.vue" beforeDir="false" afterPath="$PROJECT_DIR$/../../pages/login/login.vue" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../../pages/my/my.vue" beforeDir="false" afterPath="$PROJECT_DIR$/../../pages/my/my.vue" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../../pagesMember/address-form/address-form.vue" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../../pagesMember/address/address.vue" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../../pagesOrder/detail/components/PageSkeleton.vue" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../../pagesOrder/detail/detail.vue" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../../pagesOrder/list/components/OrderList.vue" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../../pagesOrder/list/list.vue" beforeDir="false" afterPath="$PROJECT_DIR$/../../pagesOrder/list/list.vue" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../../services/login.ts" beforeDir="false" afterPath="$PROJECT_DIR$/../../services/login.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../../services/recharge.ts" beforeDir="false" afterPath="$PROJECT_DIR$/../../services/recharge.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../../utils/http.ts" beforeDir="false" afterPath="$PROJECT_DIR$/../../utils/http.ts" afterDir="false" />
+    </list>
+    <option name="SHOW_DIALOG" value="false" />
+    <option name="HIGHLIGHT_CONFLICTS" value="true" />
+    <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
+    <option name="LAST_RESOLUTION" value="IGNORE" />
+  </component>
+  <component name="MavenImportPreferences">
+    <option name="generalSettings">
+      <MavenGeneralSettings>
+        <option name="localRepository" value="D:\maven\apache-maven-3.9.9-bin\localRepository" />
+        <option name="mavenHome" value="D:/maven/apache-maven-3.9.9-bin/apache-maven-3.9.9" />
+        <option name="userSettingsFile" value="D:\maven\apache-maven-3.9.9-bin\apache-maven-3.9.9\conf\settings.xml" />
+      </MavenGeneralSettings>
+    </option>
+  </component>
+  <component name="ProjectColorInfo"><![CDATA[{
+  "associatedIndex": 4
+}]]></component>
+  <component name="ProjectId" id="2qOM0B7Kh4nux8jlE95qFUgCoYV" />
+  <component name="ProjectViewState">
+    <option name="hideEmptyMiddlePackages" value="true" />
+    <option name="showLibraryContents" value="true" />
+  </component>
+  <component name="PropertiesComponent"><![CDATA[{
+  "keyToString": {
+    "RunOnceActivity.OpenProjectViewOnStart": "true",
+    "RunOnceActivity.ShowReadmeOnStart": "true",
+    "RunOnceActivity.go.migrated.go.modules.settings": "true",
+    "WebServerToolWindowFactoryState": "false",
+    "last_opened_file_path": "C:/Users/13563/Desktop/CBIKE2/src/static/images",
+    "settings.editor.selected.configurable": "MavenSettings",
+    "vue.rearranger.settings.migration": "true"
+  }
+}]]></component>
+  <component name="SpellCheckerSettings" RuntimeDictionaries="0" Folders="0" CustomDictionaries="0" DefaultDictionary="application-level" UseSingleDictionary="true" transferred="true" />
+  <component name="TaskManager">
+    <task active="true" id="Default" summary="Default task">
+      <changelist id="644a465a-551e-48b5-9a7c-4d551d3b92b9" name="Changes" comment="" />
+      <created>1734528942968</created>
+      <option name="number" value="Default" />
+      <option name="presentableId" value="Default" />
+      <updated>1734528942968</updated>
+      <workItem from="1734528944160" duration="3000" />
+    </task>
+    <servers />
+  </component>
+  <component name="TypeScriptGeneratedFilesManager">
+    <option name="version" value="3" />
+  </component>
+  <component name="VgoProject">
+    <settings-migrated>true</settings-migrated>
+  </component>
+</project>

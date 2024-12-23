@@ -1,12 +1,107 @@
 <script setup lang="ts">
-import { onLoad } from '@dcloudio/uni-app'
-import {ref} from 'vue'
+import { onLoad,onShow } from '@dcloudio/uni-app'
+import { ref, watch } from 'vue'
+import { getDetailAPI } from '@/services/category'
+import { postAddCartAPI } from '@/services/cart'
+import type { DetailResult } from '@/services/category'
+import type { DetailParams } from '@/services/category'
+import type { AddCartParams } from '@/services/cart'
+
+const params = ref<DetailParams>({
+  id: 0,
+})
+const data = ref<DetailResult>({
+  id: 0,
+  number: 0,
+  name: '',
+  type: 0, // 自行车类型（0：公路车，1：旅行车，2：折叠车，3：死飞，4：山地车，5：其他）
+  size: 0,
+  age: 0,
+  price: 0,
+  daily: 0,
+  monthly: 0,
+  description: '',
+  status: 0,
+  images: Array<string>(),
+})
+
+// 加入购物车参数
+const addParams = ref<AddCartParams>({
+  bikeId: 0,
+  type: 0, // 业务类型（0：日租，1：月租，2：购买）
+  count: 0,
+})
+
 //接收跳转页面参数
 onLoad((options) => {
   const id = options.id
+  params.value.id = id
+  addParams.value.bikeId = id
   console.log('接收到的商品ID:', id)
-  // 根据 ID 获取商品详情逻辑
+  // console.log('接收到的商品参数:', params.value)
+  getDetail()
 })
+
+const getDetail = async () => {
+  const response = await getDetailAPI(params.value.id, params.value)
+  console.log('响应信息: ', response)
+  if (response && response.code === 1) {
+    data.value = response.data
+    console.log('成功:', data.value)
+  } else {
+    console.log('失败')
+  }
+}
+
+// 确认弹窗
+const certain = () => {
+  uni.showModal({
+    title: '提示',
+    content: '是否确定将该方案添加至购物车？',
+    showCancel: true, // 显示取消按钮
+    cancelText: '取消', // 自定义取消按钮文字
+    confirmText: '确定', // 自定义确定按钮文字
+    success: (res) => {
+      if (res.confirm) {
+        // 用户点击了确定
+        addToCart()
+      } else if (res.cancel) {
+        // 用户点击了取消
+        console.log('用户取消了操作')
+      }
+    },
+    fail: (err) => {
+      console.error('弹窗失败:', err)
+    },
+  })
+}
+
+// 添加购物车
+const addToCart = async () => {
+  const response = await postAddCartAPI(addParams.value)
+  console.log('响应信息: ', response)
+  if (response && response.code === 1) {
+    console.log('成功')
+    uni.switchTab({
+      url: '/pages/cart/cart',
+    })
+  } else {
+    console.log('失败')
+  }
+}
+
+// 每次重选方案时会自动调用
+const initAddParams = () => {
+  addParams.value.bikeId = 0
+  addParams.value.type = 0
+  addParams.value.count = 0
+}
+
+const goToCart = () => {
+  uni.switchTab({
+    url: '/pages/cart/cart',
+  })
+}
 
 //返回上一页
 const goBack = () => {
@@ -14,56 +109,46 @@ const goBack = () => {
 }
 
 //购物车跳转
-const goCart = () => {
-  uni.switchTab({
-    url: '/pages/cart/cart',
-  })
-}
-
 //用来显示租车方案
 const showRentPrice = () => {
-  isShow.value = true;
+  isShow.value = true
 }
 
 //关闭租车方案
 const close = () => {
-  isShow.value = false;
+  isShow.value = false
 }
 //加减天数
 const add = () => {
-  rentDays.value += 1;
+  addParams.value.count += 1
 }
 const sub = () => {
-  if(rentDays.value > 0) {
-    rentDays.value -= 1;
+  if (addParams.value.count > 0) {
+    addParams.value.count -= 1
   }
 }
-//api
 
 //状态映射
 const statusMap = ['正常', '待提车', '租赁中', '已售', '待归还']
 //是否显示租车方案
-const isShow = ref(false);
-//租车天数
-const rentDays = ref(0);
-//租车方案选择   0-天  1-月
-const rentChoose = ref(0);
+const isShow = ref(false)
 
-//模拟数据
-const data = {
-  id: '1',
-  number: '123456',
-  name: '山地车',
-  type: '1',
-  size: '24',
-  age: '114',
-  price: '8848',
-  daily: '100',
-  monthly: '200',
-  description: '这是一辆很牛逼的车',
-  status: 0,
-  image: '/static/test/test.jpg',
-}
+// ==================模拟数据==================
+// const data = {
+//   id: '1',
+//   number: '123456',
+//   name: '山地车',
+//   type: '1',
+//   size: '24',
+//   age: '114',
+//   price: '8848',
+//   daily: '100',
+//   monthly: '200',
+//   description: '这是一辆很牛逼的车',
+//   status: 0,
+//   images: ['/static/test/test.jpg'],
+// }
+// ==================模拟数据==================
 </script>
 
 <template>
@@ -75,7 +160,7 @@ const data = {
         <text class="title">商品详情</text>
       </text>
 
-      <view class="bike-image" :style="{ backgroundImage: 'url(' + data.image + ')' }"></view>
+      <view class="bike-image" :style="{ backgroundImage: 'url(' + data.images[0] + ')' }"></view>
     </view>
     <!-- 商品信息 -->
     <view class="information">
@@ -116,7 +201,7 @@ const data = {
       </view>
 
       <view class="price-information">
-        <view class="tobuy" @tap="goCart">
+        <view class="tobuy" @tap="goToCart">
           <image src="@/static/tabs/cart_default.png" class="tobuy-image"></image>
         </view>
         <text class="tag">租越久，越便宜</text>
@@ -124,7 +209,13 @@ const data = {
           <text class="price-daily">{{ data.daily }}币/天</text>
           <text class="price-tag">定期租赁</text>
         </view>
-        <view class="price-sell-box">
+        <view
+          class="price-sell-box"
+          @tap="
+            addParams.type = 2;
+            certain()
+          "
+        >
           <text class="price-sell">{{ data.price }}币</text>
           <text class="sell-tag">全款购买</text>
         </view>
@@ -132,32 +223,36 @@ const data = {
     </view>
   </view>
   <!-- 租车方案 -->
-  <view
-    v-if="isShow"
-    class="rent-detail"
-  >
+  <view v-if="isShow" class="rent-detail">
     <view class="rent-detail-title">
       选择租车方案
-      <text class="close" @tap="close">x</text>
+      <text
+        class="close"
+        @tap="
+          close();
+          initAddParams()
+        "
+        >x</text>
     </view>
     <view class="rent-detail-content">
-      <view class="detail-daily-box" @tap="rentChoose = 0">
+      <view class="detail-daily-box" @tap="initAddParams(); addParams.type = 0 ; ">
         <text class="detail-daily-title">日租</text>
         <text class="detail-daily-price">{{ data.daily }}币/天</text>
       </view>
       <view class="detail-monthly-box">
-        <text class="detail-monthly-title" @tap="rentChoose = 1">月租</text>
+        <text class="detail-monthly-title" @tap="initAddParams(); addParams.type = 1 ; ">月租</text>
         <text class="detail-monthly-price">{{ data.monthly }}币/月</text>
       </view>
     </view>
     <view class="rent-detail-bottom">
       <text class="rent-tag">租车时长</text>
-      <text class="rent-time">共{{ rentDays }}{{ rentChoose === 0 ? '天' : '月' }}</text>
+      <text class="rent-time">共{{ addParams.count }}{{ addParams.type === 0 ? '天' : '月' }}</text>
       <text class="rent-options">
         <text class="time-sub" @tap="sub">-</text>
-        <text class="rent-option-time">{{ rentDays }}</text>
+        <text class="rent-option-time">{{ addParams.count }}</text>
         <text class="time-add" @tap="add">+</text>
       </text>
+      <text class="certain" @tap="certain()">提交</text>
     </view>
   </view>
 </template>
@@ -291,7 +386,7 @@ page {
         font-size: 20rpx;
         margin: 40rpx 10rpx 0 80rpx;
       }
-      .price-daily-box{
+      .price-daily-box {
         display: flex;
         flex-direction: column;
         align-items: center;
@@ -303,7 +398,7 @@ page {
         border-radius: 20rpx 0 0 20rpx;
         background-color: #7f7f7f;
       }
-      .price-sell-box{
+      .price-sell-box {
         display: flex;
         flex-direction: column;
         align-items: center;
@@ -319,7 +414,7 @@ page {
   }
 }
 
-.rent-detail{
+.rent-detail {
   position: absolute;
   z-index: 999;
   height: 30vh;
@@ -330,21 +425,21 @@ page {
   flex-direction: column;
   background: #fff;
   border-radius: 20rpx 20rpx 0 0;
-  .rent-detail-title{
+  .rent-detail-title {
     display: flex;
     flex-direction: row;
     margin: 20rpx 0 0 20rpx;
     font-size: 35rpx;
     font-weight: bold;
-    .close{
+    .close {
       margin-left: 450rpx;
     }
   }
-  .rent-detail-content{
+  .rent-detail-content {
     display: flex;
     flex-direction: row;
     margin: 20rpx 0 0 20rpx;
-    .detail-daily-box{
+    .detail-daily-box {
       display: flex;
       flex-direction: column;
       align-items: center;
@@ -353,18 +448,18 @@ page {
       background-color: #7f7f7f;
       border-radius: 20rpx;
       margin-right: 150rpx;
-      height:250rpx;
-      width:250rpx;
-      .detail-daily-title{
-        color:#fff;
-        margin-bottom:20rpx;
+      height: 250rpx;
+      width: 250rpx;
+      .detail-daily-title {
+        color: #fff;
+        margin-bottom: 20rpx;
       }
-      .detail-daily-price{
+      .detail-daily-price {
         font-size: 45rpx;
         color: #cf4444;
       }
     }
-    .detail-monthly-box{
+    .detail-monthly-box {
       display: flex;
       flex-direction: column;
       align-items: center;
@@ -372,48 +467,51 @@ page {
       font-weight: bold;
       background-color: #7f7f7f;
       border-radius: 20rpx;
-      height:250rpx;
-      width:250rpx;
+      height: 250rpx;
+      width: 250rpx;
     }
-    .detail-monthly-title{
-      color:#fff;
-      margin-bottom:20rpx;
+    .detail-monthly-title {
+      color: #fff;
+      margin-bottom: 20rpx;
     }
-    .detail-monthly-price{
+    .detail-monthly-price {
       font-size: 45rpx;
       color: #cf4444;
     }
   }
-  .rent-detail-bottom{
+  .rent-detail-bottom {
     display: flex;
     flex-direction: row;
     margin: 20rpx 0 0 20rpx;
-    .rent-time{
+    .rent-time {
       margin-left: 300rpx;
     }
-    .rent-options{
+    .rent-options {
       margin-left: 20rpx;
       display: flex;
-      .time-sub{
-        font-size:30rpx;
+      .time-sub {
+        font-size: 30rpx;
         font-weight: bold;
         border: 2rpx solid #7f7f7f;
         border-radius: 10rpx;
         width: 40rpx;
         height: 10rpx;
       }
-      .time-add{
-        font-size:30rpx;
+      .time-add {
+        font-size: 30rpx;
         font-weight: bold;
         border: 2rpx solid #7f7f7f;
         border-radius: 10rpx;
         width: 40rpx;
         height: 10rpx;
       }
-      .rent-option-time{
+      .rent-option-time {
         margin: 0 10rpx;
       }
     }
   }
+}
+.certain{
+  margin-left: 20rpx;
 }
 </style>

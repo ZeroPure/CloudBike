@@ -1,10 +1,9 @@
 <script setup lang="ts">
-import { getCategoryTopAPI } from '@/services/category'
-import { getHomeBannerAPI } from '@/services/home'
-import type { CategoryTopItem } from '@/types/category'
-import type { BannerItem } from '@/types/home'
-import { onLoad } from '@dcloudio/uni-app'
-import { computed, ref } from 'vue'
+import { onLoad,onShow } from '@dcloudio/uni-app'
+import { computed, ref,watch } from 'vue'
+import { getCategoryAPI } from '@/services/category'
+import type {CategoryParams} from '@/services/category'
+import type { CategoryResult } from '@/services/category'
 //是否加载完成
 const isFinish = ref(true)
 //目前列表被选中的索引
@@ -23,34 +22,66 @@ const categoryList = [
 
 const backgroundImageUrl = ref('/static/test/test.jpg')
 
-//api接口
+const params = ref<CategoryParams>({
+  type: 0
+})
+const data = ref<Array<CategoryResult>>([])
 
-//模拟数据
-const data = [
-  {
-    id: '1',
-    name: '飞天大摩托',
-    size: '27',
-    price: '8848',
-    daily: '10',
-    monthly: '100',
-    image: '/static/test/test.jpg',
-  },
-  {
-    id: '2',
-    name: '飞天大摩托',
-    size: '27',
-    price: '8848',
-    daily: '10',
-    monthly: '100',
-    image: '/static/test/test.jpg',
-  },
-]
+//api接口
+const fetchCategoryData = (async () => {
+  const response = await getCategoryAPI(params.value)
+  console.log(response)
+  if(response && response.code === 1){
+    data.value = response.data
+    console.log("成功",data.value)
+  }
+  else{
+    console.log("失败",response)
+  }
+})
+
+onLoad(async () => {
+    await fetchCategoryData()
+})
+
+onShow(async () => {
+  await fetchCategoryData()
+})
+
+//监听
+watch(activeIndex, async (newValue) => {
+  params.value.type = newValue
+  await fetchCategoryData()
+})
+
+// //===============模拟数据===================
+// const data = [
+//   {
+//     id: '1',
+//     name: '飞天大摩托',
+//     size: '27',
+//     price: '8848',
+//     daily: '10',
+//     monthly: '100',
+//     image: '/static/test/test.jpg',
+//   },
+//   {
+//     id: '2',
+//     name: '飞天大摩托',
+//     size: '27',
+//     price: '8848',
+//     daily: '10',
+//     monthly: '100',
+//     image: '/static/test/test.jpg',
+//   },
+// ]
+//
+// // ============================================
 
 //详情页面
-const toDetail = (id: string) => {
+const toDetail = (id: number) => {
   uni.navigateTo({
-    url: '/pages/goods/goods?id='+ id,
+    url: '/pages/goods/goods?id=' + id,
   })
 }
 </script>
@@ -98,7 +129,7 @@ const toDetail = (id: string) => {
             class="bikes"
             v-for="item in data"
             :key="item.id"
-            :style="{ backgroundImage: 'url(' + item.image + ')' }"
+            :style="{ backgroundImage: 'url(' + item.images[0] + ')' }"
             hover-class="none"
             @tap="toDetail(item.id)"
           >

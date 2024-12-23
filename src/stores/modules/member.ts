@@ -1,4 +1,4 @@
-import type { LoginResult } from '@/types/member'
+import type { LoginResult } from '@/services/login'
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
 

@@ -1,39 +1,59 @@
 <script setup lang="ts">
 import { ref } from 'vue'
+import { onLoad,onShow } from '@dcloudio/uni-app'
+import {getCartAPI} from '@/services/cart'
+import { deleteCartAPI } from '@/services/cart'
+import {postSubmitOrderAPI,putUpdateCartAPI} from '@/services/cart'
+import type {DeleteCartParams,UpdateCartParams} from '@/services/cart'
+import type { GetCartResult } from '@/services/cart'
+import type { SubmitOrderParams} from '@/services/cart'
+import type {SubmitOrderResult} from '@/services/cart'
+
 
 //总价
 const totalPrice = ref(0)
-//购物车id(通过api获取)
-const cartID = ref(0)
 
-//测试数据
-const memberStore = ref([
-  {
-    type: 0, // 日租:0,月租:1,购买:2
-    count: 10,
-    payment: 1000,
-    nunmber: 5555555,
-    name: '随便',
-    images:
-      'https://img0.baidu.com/it/u=2341097482,2639203366&fm=253&fmt=auto&app=138&f=JPEG?w=800&h=1067',
-    selected: false, //是否选中
-  },
-  {
-    type: 2, // 日租:0,月租:1,购买:2
-    count: 10,
-    payment: 1,
-    nunmber: 5555555,
-    name: '随便了',
-    images:
-      'https://img0.baidu.com/it/u=2341097482,2639203366&fm=253&fmt=auto&app=138&f=JPEG?w=800&h=1067',
-    selected: false, //是否选中
-  },
-])
+const memberStore = ref<Array<GetCartResult>>([])
+
+const deleteParams = ref<DeleteCartParams>({
+  ids: Array<number>()
+})
+
+const submitParams = ref<SubmitOrderParams>({
+  id: 0,//购物车id
+})
+
+onLoad(async () => {
+    getCartData()
+})
+
+onShow(async () => {
+  getCartData()
+})
+
+const getCartData = async () => {
+  const response = await getCartAPI()
+  console.log(response)
+  if(response && response.code === 1){
+    memberStore.value = response.data
+    // 默认都未选中
+    memberStore.value.forEach((item) => {
+      item.selected = false;
+    })
+    console.log('success',memberStore.value)
+  }
+  else{
+    console.log('error',response)
+  }
+}
+
 
 // 选择/取消选中商品
-const selectItem = (item: { id: number; selected: boolean; payment: number }) => {
-  item.selected = !item.selected;
-  calculateTotalPrice();
+const selectItem = (item: { id: number; selected: boolean; payment: number; status: number }) => {
+  if(item.status === 0){
+    item.selected = !item.selected;
+    calculateTotalPrice();
+  }
 };
 
 //选中并计算总价
@@ -45,36 +65,26 @@ const calculateTotalPrice = () => {
 
 //清空(请求修改的api接口删除购物车数据)
 const clearAll = async () => {
-  // try {
-  //   // 发起后端请求，清空购物车数据
-  //   const res = await uni.request({
-  //     url: 'https://your-api-endpoint/clear-cart', // 替换为你的 API 地址
-  //     method: 'POST',
-  //     data: {
-  //       cartIds: memberStore.value.map((item) => item.id), // 发送购物车的商品 ID 数组
-  //     },
-  //   })
-  //
-  //   if (res.statusCode === 200) {
-  //     // 清空本地购物车数组
-  //     memberStore.value = [];
-  //     uni.showToast({ title: '购物车已清空', icon: 'success' })
-  //     calculateTotalPrice(); // 重置总价
-  //   } else {
-  //     uni.showToast({ title: '清空失败，请稍后再试', icon: 'error' })
-  //   }
-  // } catch (error) {
-  //   console.error('清空购物车失败:', error)
-  //   uni.showToast({ title: '网络错误，请稍后再试', icon: 'error' })
-  // }
-
-  memberStore.value = [];
-  uni.showToast({ title: '购物车已清空', icon: 'success' })
-  calculateTotalPrice(); // 重置总价
+  // 将 memberStore 中的 id (number) 转换为 string 并赋值给 deleteParams
+  deleteParams.value = {
+    ids: memberStore.value.map((item) => item.id), // 使用 map 方法将 number 转为 string
+  };
+  console.log(deleteParams.value)
+  const response = await deleteCartAPI(deleteParams.value)
+  if(response && response.code === 1){
+    getCartData()
+    console.log('success',response)
+    uni.showToast({ title: '购物车已清空', icon: 'success' })
+    calculateTotalPrice(); // 重置总价
+  }
+  else{
+    console.log('error',response)
+  }
 }
 
+
 //减少天数
-const sub = (item: { count: number }) => {
+const sub = (item: { count: number}) => {
   if (item.count > 0) {
     item.count -= 1
   }
@@ -88,13 +98,26 @@ const add = (item: { count: number }) => {
 }
 
 //提交订单(cartID提交)
-const commitOrder = () => {
-  // 接收到订单id后，跳转到订单页面
-  //这里要写个api接口，提交订单
+const commitOrder = async () => {
+  memberStore.value.forEach((item) => {
+    if(item.selected){
+      submitParams.value.id = item.id
+    }
+  })
+  console.log(submitParams.value)
+  const response = await postSubmitOrderAPI(submitParams.value)
+  if(response && response.code === 1){
+    console.log('success',response)
+    uni.navigateTo({ url: '/pagesOrder/create/create?id='+ response.data.id })
+  }
+  else if(response && response.msg === '来晚了，单车已被抢'){
+    uni.showToast({ title: '该订单已支付', icon: 'error' })
+  }
+  else{
+    console.log('error',response)
+    uni.showToast({ title: '提交订单失败', icon: 'error' })
+  }
 
-  //==================
-  let id = 1; // 假设订单id为1
-  uni.navigateTo({ url: '/pagesOrder/create/create?id='+id })
 }
 </script>
 
@@ -107,11 +130,13 @@ const commitOrder = () => {
       class="cart-list"
       @tap="selectItem(item)"
     >
-      <view class="cart-tag" v-if="item.selected"> yes </view>
+
 
       <view class="cart">
+        <view class="cart-tag" v-if="item.selected && item.status === 0"> 选中 </view>
+        <view class="cart-isSell" v-else-if= "item.status !== 0"> 已支付</view>
         <view class="list-img">
-          <image :src="item.images" mode="aspectFill"></image>
+          <image :src="(item.images[0]===''?item.images[1]:item.images[0])" mode="aspectFill"></image>
         </view>
 
         <view class="list-title">
@@ -121,16 +146,20 @@ const commitOrder = () => {
         </view>
 
         <view class="list-mid">
-          <text class="list-id">id:{{ item. nunmber }}</text>
+          <text class="list-id">id:{{ item. number }}</text>
           <view v-if="item.type !== 2" class="list-count">
-            <text>租期</text>
-            <text @click.stop="sub(item)">-</text>
+            <text class="rent-time">租期: </text>
             <text>{{ item.count }}</text>
-            <text @click.stop="add(item)">+</text>
+            <text v-if="item.type === 0">日</text>
+            <text v-else-if="item.type === 1">月</text>
           </view>
         </view>
 
-        <view class="list-price"> {{ item.payment }}币 </view>
+        <view class="list-price">
+          {{ item.payment }}币
+          <text v-if="item.type === 0">/日</text>
+          <text v-else-if="item.type === 1">/月</text>
+        </view>
       </view>
     </view>
   </scroll-view>
@@ -147,6 +176,8 @@ const commitOrder = () => {
 
     <button class="commit" @click="commitOrder">提交订单</button>
   </view>
+
+  <view class="background"></view>
 </template>
 
 <style lang="scss">
@@ -194,8 +225,19 @@ page {
   border-radius: 10rpx;
 }
 .cart-tag {
+  display: flex;
+  align-items: center;
+  justify-content: center;
   color: #fff;
   background-color: #00c853;
+  font-size: 25rpx;
+}
+.cart-isSell {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  background-color: #7f7f7f;
   font-size: 25rpx;
 }
 .bottom-top {
@@ -212,7 +254,44 @@ page {
   border-radius: 10rpx;
 }
 .commit {
-  border: 2rpx solid #000;
-  border-radius: 10rpx;
+  margin-top: 100rpx;
+  height: 100rpx;
+  width: 500rpx;
+  border-radius: 60rpx;
+  font-size: 30rpx;
+  display: flex;
+  color: #ffffff;
+  align-items: center;
+  justify-content: center;
+  background: radial-gradient(circle 800rpx at center, #dc4f7e, #ff7f00);
+  font-weight: bold;
+}
+.edit-certain{
+  border: 2rpx solid #7f7f7f;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  font-size: 25rpx;
+}
+.commit{
+  position: absolute;
+  bottom: 120rpx;
+  left: 130rpx;
+}
+.clear-all{
+  position: absolute;
+  bottom: 20rpx;
+}
+.bottom-mid{
+  position: absolute;
+  bottom: 70rpx;
+}
+.background{
+  position:absolute;
+  z-index: -1;
+  height: 600rpx;
+  width: 100%;
+  top: 0;
+  background: linear-gradient(to bottom, #dc4f7e, #f7f7f8);
 }
 </style>

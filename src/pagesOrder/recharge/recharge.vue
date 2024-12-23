@@ -1,37 +1,34 @@
 <script setup lang="ts">
-import { useGuessList } from '@/composables'
-import { ref } from 'vue'
+import { ref, watch } from 'vue'
 import type { TireCoin } from '@/types/tireCoin'
 import { useMemberStore } from '@/stores'
+import { useTireCoinStore } from '@/stores/modules/tireCoin'
 import { onShow } from '@dcloudio/uni-app'
-import { getMemberTireCoinAPI } from '@/services/recharge'
+import type { RechargeParams } from '@/services/recharge'
+import { putMemberTireCoinAPI } from '@/services/recharge'
 
 const tireCoinList = [
-  { type: '1', text: '66', price: '6.00', selected: false },
-  { type: '2', text: '180', price: '16.00', selected: false },
-  { type: '3', text: '200', price: '64.80', selected: false },
-  { type: '4', text: '200', price: '168.00', selected: false },
-  { type: '5', text: '360', price: '300.00', selected: false },
-  { type: '6', text: '798', price: '648.00', selected: false },
+  { type: 1, text: '64', price: '6.00', selected: false },
+  { type: 2, text: '128', price: '16.00', selected: false },
+  { type: 3, text: '256', price: '25.00', selected: false },
+  { type: 4, text: '512', price: '50.00', selected: false },
+  { type: 5, text: '1024', price: '100.00', selected: false },
+  { type: 6, text: '2048', price: '200.00', selected: false },
 ]
 
 //当前选中的价格
 const selectedPrice = ref<string | null>(null)
 
+const params = ref<RechargeParams>({
+  discount: 0,
+})
+
+// 存储
 const memberStore = useMemberStore()
-const balance = ref(0)
-const tireCoins = ref<number>()
-const getMemberTireCoin = async () => {
-  const res = await getMemberTireCoinAPI()
-  tireCoins.value = res.result
-}
+const tireCoinStore = useTireCoinStore()
 
 //初始化获得已登录用户的余额
-onShow(() => {
-  if (memberStore.profile) {
-    getMemberTireCoin()
-  }
-})
+onShow(() => {})
 
 // 修改选中状态
 const onChangeSelected = (item: any) => {
@@ -39,9 +36,23 @@ const onChangeSelected = (item: any) => {
   tireCoinList.forEach((coin) => {
     coin.selected = false
   })
-
+  params.value.discount = item.type
+  //console.log(params.value)
   item.selected = true
   selectedPrice.value = item.price
+}
+
+const commit = async () => {
+  const response = await putMemberTireCoinAPI(params.value)
+  if (response && response.code === 1) {
+    console.log('success', response)
+    uni.navigateTo({
+      url: `./rechargeSuccess?price=${selectedPrice.value}`
+    })
+  } else {
+    console.log('error', response.data)
+    uni.showToast({ title: '充值失败', icon: 'error', duration: 2000 })
+  }
 }
 </script>
 
@@ -49,7 +60,7 @@ const onChangeSelected = (item: any) => {
   <view class="viewport">
     <view class="title">
       <navigator>
-        <text class="balance">余额:{{ balance }}</text>
+        <text class="balance">余额:{{ tireCoinStore.selectedTireCoin.balance }}</text>
         <text class="record">充值记录</text>
         <text class="icon-right"></text>
       </navigator>
@@ -74,9 +85,13 @@ const onChangeSelected = (item: any) => {
       </text>
     </view>
     <view class="certain">
-      <navigator class="navigator" :url="'./rechargeSuccess?price=' + selectedPrice" hover-class="none">
+      <view
+        class="navigator"
+        hover-class="none"
+        @tap="commit"
+      >
         确认付款
-      </navigator>
+      </view>
     </view>
   </view>
 </template>
@@ -114,7 +129,8 @@ page {
     margin-bottom: 0;
   }
   .balance {
-    margin-right: 400rpx;
+    max-width: 180rpx;
+    margin-right: 300rpx;
   }
 }
 
@@ -194,7 +210,7 @@ page {
   }
 }
 
-.selectedprice{
+.selectedprice {
   margin-top: 20rpx;
   font-size: 25rpx;
   padding: 10rpx 10rpx 10rpx 20rpx;

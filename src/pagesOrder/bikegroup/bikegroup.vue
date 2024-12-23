@@ -1,83 +1,38 @@
 <script setup lang="ts">
 import '@/static/font.css'
+import { onLoad,onShow } from '@dcloudio/uni-app'
+import { ref } from 'vue'
+import { getRecentBikeGroupAPI } from '@/services/bikegroup'
+import { useUserStore } from '@/stores/modules/user'
+import type{ GetRecentBikeGroupResult } from '@/services/bikegroup'
+const groups = ref<Array<GetRecentBikeGroupResult>>([])
+
+const userStore = useUserStore()
 
 // api接口
+onLoad(async () => {
+  const response = await getRecentBikeGroupAPI()
+  console.log(response)
+  if(response && response.code === 1){
+    groups.value = response.data
+    console.log("成功",groups.value)
+  }
+  else{
+    console.log("失败")
+  }
+})
 
-//模拟数据部分
-const groups = [
-  {
-    id: '1',
-    title: '深圳湾骑行',
-    groupImage: '/static/test/test.jpg',
-    signup: '10',
-    time: '11/29 8:30',
-    username: '张三',
-    userImage: '/static/img/join.png',
-  },
-  {
-    id: '2',
-    title: '深圳湾骑行',
-    groupImage: '/static/test/test.jpg',
-    signup: '10',
-    time: '11/29 8:30',
-    username: '张三',
-    userImage: '/static/img/join.png',
-  },
-  {
-    id: '3',
-    title: '深圳湾骑行',
-    groupImage: '/static/test/test.jpg',
-    signup: '10',
-    time: '11/29 8:30',
-    username: '张三',
-    userImage: '/static/img/join.png',
-  },
-  {
-    id: '4',
-    title: '深圳湾骑行',
-    groupImage: '/static/test/test.jpg',
-    signup: '10',
-    time: '11/29 8:30',
-    username: '张三',
-    userImage: '/static/img/join.png',
-  },
-  {
-    id: '5',
-    title: '深圳湾骑行',
-    groupImage: '/static/test/test.jpg',
-    signup: '10',
-    time: '11/29 8:30',
-    username: '张三',
-    userImage: '/static/img/join.png',
-  },
-  {
-    id: '6',
-    title: '深圳湾骑行',
-    groupImage: '/static/test/test.jpg',
-    signup: '10',
-    time: '11/29 8:30',
-    username: '张三',
-    userImage: '/static/img/join.png',
-  },
-  {
-    id: '7',
-    title: '深圳湾骑行',
-    groupImage: '/static/test/test.jpg',
-    signup: '10',
-    time: '11/29 8:30',
-    username: '张三',
-    userImage: '/static/img/join.png',
-  },
-  {
-    id: '8',
-    title: '深圳湾骑行',
-    groupImage: '/static/test/test.jpg',
-    signup: '10',
-    time: '11/29 8:30',
-    username: '张三',
-    userImage: '/static/img/join.png',
-  },
-]
+onShow(async () => {
+  const response = await getRecentBikeGroupAPI()
+  console.log(response)
+  if(response && response.code === 1){
+    groups.value = response.data
+    console.log("成功",groups.value)
+  }
+  else{
+    console.log("失败")
+  }
+})
 </script>
 
 <template>
@@ -109,16 +64,15 @@ const groups = [
         :key="item.id"
         :url="`/pagesOrder/bikegroup/groupDetail?id=${item.id}`"
       >
-        <view class="content" :style="{ backgroundImage: 'url(' + item.groupImage + ')' }">
+        <view class="content" :style="{ backgroundImage: 'url(' + item.images[0] + ')' }">
           <text class="content-top">
-            <text class="title">{{ item.title }}</text>
-            <text class="signup">{{ item.signup }}人报名</text>
+            <text class="title">{{ item.name }}</text>
           </text>
-
-          <text class="time">开始时间 {{ item.time }}</text>
+          <text class="signup">{{ item.participants }}人报名</text>
+          <text class="time">开始时间 {{ item.departureTime }}</text>
 
           <view class="user">
-            <image class="userImage" :src="item.userImage"></image>
+            <image class="userImage" :src="userStore.selectedUser.image"></image>
             <text class="username">{{ item.username }}</text>
           </view>
         </view>
@@ -214,11 +168,11 @@ page {
     padding: 10rpx;
     border: 2rpx solid #afaeae;
     border-radius: 20rpx;
-    height: 400rpx;
+    height: 450rpx;
     width: 320rpx;
     margin: 10rpx;
     background-position: top center;
-    background-size: 100% 60%;
+    background-size: 100% 55%;
     background-repeat: no-repeat;
   }
 
@@ -227,15 +181,21 @@ page {
     flex-direction: row;
     margin: 78% 0 3% 0;
     .title {
+      max-width: 80rpx;
       font-size: 28rpx;
       font-weight: bold;
       color: #000;
-      margin-right: 70rpx;
+      margin-right: 50rpx;
     }
     .signup {
-      font-size: 22rpx;
+      font-size: 25rpx;
       color: #7f7f7f;
     }
+  }
+  .signup{
+    font-size: 25rpx;
+    color: #7f7f7f;
+    margin-bottom: 15rpx;
   }
   .time {
     font-size: 22rpx;
@@ -275,4 +235,5 @@ page {
     font-weight: bold;
   }
 }
+
 </style>

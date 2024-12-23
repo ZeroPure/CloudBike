@@ -1,69 +1,68 @@
 <script setup lang="ts">
 import { postLoginWxMinAPI } from '@/services/login'
 import { useMemberStore } from '@/stores'
-import type { LoginResult } from '@/types/member'
 import { onLoad } from '@dcloudio/uni-app'
 import { ref } from 'vue'
-import {http} from "@/utils/http";
 
-// #ifdef MP-WEIXIN
-// 获取 code 登录凭证
-let code = ''
-const getCode = (async () => {
-  wx.login({
-    success: function (res) {
-      code = res.code;
-      if (code) {
-        console.log('获取用户登录凭证：' + code);
-      } else {
-        console.log('获取用户登录态失败：' + res.errMsg);
-      }
-    }
-  });
+const memberStore = useMemberStore()
+const code = ref('') // 存储微信登录凭证
+
+// 获取 code
+onLoad(async () => {
+  try {
+    const res = await wx.login()
+    code.value = res.code
+    console.log('获取登录凭证 code:', code)
+  } catch (error) {
+    uni.showToast({ icon: 'none', title: '获取登录凭证失败' })
+  }
 })
 
-// 获取用户手机号码
-const onGetphonenumber: UniHelper.ButtonOnGetphonenumber = async (ev) => {
-  const { encryptedData, iv } = ev.detail
-  if (!code) {
-    uni.showToast({ icon: 'error', title: '登录失败，请重试' })
+
+
+// 处理微信登录（弹出授权窗口）
+const handleWxLogin = async () => {
+  if (!code.value) {
+    uni.showToast({ icon: 'none', title: '登录凭证失效，请重新进入' })
     return
   }
+
+  // 获取用户头像和昵称
   try {
-    const res = await postLoginWxMinAPI({ code, encryptedData, iv })
-    console.log(res.result)
-    loginSuccess(res.result)
-
+    // 登录请求，携带 code 和用户信息
+    const result = await postLoginWxMinAPI({
+      code: code.value,
+    })
+    console.log('后端返回结果:', result)
+    console.log('code返回结果:',result.code)
+    if (result && result.code === 1) {
+      const userRecord = result.data
+      // 保存返回响应的id、token、openid（唯一标识）
+      memberStore.setProfile(userRecord)
+      console.log("存储信息: ",memberStore.profile)
+      uni.showToast({ icon: 'success', title: '登录成功' })
+      setTimeout(() => {
+        uni.navigateBack()
+      }, 500)
+    } else {
+      uni.showToast({ icon: 'none', title: result.msg || '登录失败' })
+    }
   } catch (error) {
-    console.error('登录失败:', error)
-    uni.showToast({ icon: 'error', title: '登录失败，请重试' })
+    console.error('授权或登录失败:', error)
+    uni.showToast({ icon: 'none', title: '授权失败，请重试' })
   }
-}
-// #endif
-
-const loginSuccess = (profile: LoginResult) => {
-  // 保存会员信息
-  const memberStore = useMemberStore()
-  memberStore.setProfile(profile)
-  // 成功提示
-  uni.showToast({ icon: 'success', title: '登录成功' })
-  setTimeout(() => {
-    // 页面跳转
-    uni.switchTab({ url: '/pages/my/my' })
-    //uni.navigateBack()
-  }, 500)
 }
 </script>
 
 <template>
   <view class="viewport">
     <view class="logo">
-     <image src="/public/logo.png"></image>
+      <image src="/public/logo.png"></image>
     </view>
     <view class="login">
       <!-- 小程序端授权登录 -->
       <!-- #ifdef MP-WEIXIN -->
-      <button class="button phone" open-type="getPhoneNumber" @getphonenumber="onGetphonenumber" @tap="getCode">
+      <button class="button phone" @click="handleWxLogin">
         <text class="icon icon-phone"></text>
         微信登录
       </button>

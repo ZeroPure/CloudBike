@@ -1,27 +1,135 @@
 <script setup lang="ts">
+import { onLoad, onShow } from '@dcloudio/uni-app'
 import { useGuessList } from '@/composables'
-import {ref} from 'vue'
+import { ref } from 'vue'
 import { useMemberStore } from '@/stores'
+import { getUserInfoAPI } from '@/services/user'
+import { getBalanceAPI } from '@/services/user'
+import { getMyBikeActivitiesAPI } from '@/services/bikegroup'
+import { getRecentBikeGroupAPI } from '@/services/bikegroup'
+import type { GetRecentBikeGroupResult } from '@/services/bikegroup'
+import type { GetMyBikeActivitiesParams } from '@/services/bikegroup'
+import type { GetMyBikeActivitiesResult } from '@/services/bikegroup'
+import type { UserInfoResult } from '@/services/user'
+import type { BalanceResult } from '@/services/user'
+import { useUserStore } from '@/stores/modules/user'
+import { useTireCoinStore } from '@/stores/modules/tireCoin'
 // 获取屏幕边界到安全区域距离
 const { safeAreaInsets } = uni.getSystemInfoSync()
+// 存储用户信息(
+const userInfo = ref<UserInfoResult>({
+  username: '',
+  phone: '',
+  image: '',
+})
+const userStore = useUserStore()
+//存储轮胎币信息
+const tireCoin = ref<BalanceResult>({
+  balance: 0,
+})
+const tireCoinStore = useTireCoinStore()
+// 获取用户标识(token)
+const memberStore = useMemberStore()
+// 我的骑行总数
+const myRidingNumber = ref(0)
+const myRidParams = ref<GetMyBikeActivitiesParams>({
+  status: 0, // 0：全部，1：未开始，2：已结束
+})
+const myRidingList = ref<Array<GetMyBikeActivitiesResult>>([])
+// 发布骑行总数
+const releaseNumber = ref(0)
+
+//==================虚拟数据==================
 // 我的订单
 const orderTypes = [
   { type: '1', text: '待支付', icon: 'icon-currency' },
   { type: '2', text: '待提车', icon: 'icon-gift' },
   { type: '3', text: '退换货', icon: 'icon-check' },
 ]
-// 获取会员信息
-const memberStore = useMemberStore()
 
 //获取用户轮胎币、消费次数、我的骑行、发布骑行次数
-const tireCoin = ref(0);
-const transactionNumber = ref(0);
-const myRiding = ref(0);
-const releaseNumber = ref(0);
-
+//const tireCoin = ref(0);
+const transactionNumber = ref(0)
+// const myRiding = ref(0)
+// const releaseNumber = ref(0)
 const { guessRef, onScrolltolower } = useGuessList()
+const hasUserInfo = ref(false)
+//==================虚拟数据==================
 
-const test = ref(0);
+// 退出
+const logout = () => {
+  console.log('注销成功')
+  memberStore.clearProfile()
+}
+
+//获取用户名、头像、手机号
+const getUserInfo = async () => {
+  const userInfoResponse = await getUserInfoAPI()
+  console.log('response information:', userInfoResponse)
+  if (userInfoResponse && userInfoResponse.code === 1) {
+    userInfo.value = userInfoResponse.data
+    userStore.changeSelectedUser(userInfo.value)
+    console.log('成功获取到用户信息: ', userInfo.value)
+  } else {
+    console.log('获取用户信息失败')
+  }
+}
+
+// 获取轮胎币信息
+const getBalance = async () => {
+  const tireCoinResponse = await getBalanceAPI()
+  console.log('获取轮胎币信息: ', tireCoinResponse)
+  if (tireCoinResponse && tireCoinResponse.code === 1) {
+    tireCoin.value = tireCoinResponse.data
+    tireCoinStore.changeSelectedTireCoin(tireCoin.value)
+    console.log('成功获取到轮胎币信息: ', tireCoin.value)
+  } else {
+    console.log('获取轮胎币信息失败')
+  }
+}
+
+// 获取我的骑行总数
+const getMyRidingNumber = async () => {
+  const response = await getMyBikeActivitiesAPI(myRidParams.value)
+  if (response && response.code === 1) {
+    myRidingNumber.value = response.data.length
+    console.log('获取我的骑行总数成功: ', myRidingNumber.value)
+  } else {
+    console.log('获取我的骑行总数失败', response)
+  }
+}
+
+//获取发布骑行总数
+const getReleaseNumber = async () => {
+  const response = await getRecentBikeGroupAPI()
+  if (response && response.code === 1) {
+    const temp = response.data
+    temp.forEach((item) => {
+      if (item.username === userStore.selectedUser.username) {
+        releaseNumber.value += 1
+      }
+    })
+    console.log('成功', response.data)
+  } else {
+    console.log('失败', response)
+  }
+}
+
+onLoad(async () => {
+  getBalance()
+  getUserInfo()
+  getMyRidingNumber()
+  releaseNumber.value = 0
+  getReleaseNumber()
+})
+
+onShow(async () => {
+  getBalance()
+  getUserInfo()
+  getMyRidingNumber()
+  releaseNumber.value = 0
+  getReleaseNumber()
+})
 </script>
 
 <template>
@@ -31,16 +139,17 @@ const test = ref(0);
       <!-- 情况1：已登录 -->
       <view class="overview" v-if="memberStore.profile">
         <navigator url="/pagesMember/profile/profile" hover-class="none">
-          <image class="avatar" :src="memberStore.profile.avatar" mode="aspectFill"></image>
+          <image class="avatar" :src="userStore.selectedUser.image" mode="aspectFill"></image>
         </navigator>
         <view class="meta">
           <view class="nickname">
-            {{ memberStore.profile.nickname || memberStore.profile.account }}
+            {{ userStore.selectedUser.username }}
           </view>
           <navigator class="extra" url="/pagesMember/profile/profile" hover-class="none">
             <text class="update">更新头像昵称</text>
           </navigator>
         </view>
+        <view class="logout" @tap="logout">注销</view>
       </view>
       <!-- 情况2：未登录 -->
       <view class="overview" v-else>
@@ -65,7 +174,7 @@ const test = ref(0);
     <view class="information">
       <view class="content">
         <navigator class="navigator" url="/pagesOrder/recharge/recharge" hover-class="none">
-          <span class="number">{{ tireCoin }}</span>
+          <span class="number">{{ tireCoin.balance }}</span>
           <span class="text">轮胎币</span>
         </navigator>
         <navigator class="navigator">
@@ -73,7 +182,7 @@ const test = ref(0);
           <span class="text">消费次数</span>
         </navigator>
         <navigator class="navigator" url="/pagesMember/myRiding/myRiding">
-          <span class="number">{{ myRiding }}</span>
+          <span class="number">{{ myRidingNumber }}</span>
           <span class="text">我的骑行</span>
         </navigator>
         <navigator class="navigator" url="/pagesMember/launchGroup/launchGroup">
@@ -86,7 +195,7 @@ const test = ref(0);
     <!-- 我的订单 -->
     <view class="orders">
       <view class="title">
-        <span style="font-weight: bold;margin-right:63%">我的订单</span>
+        <span style="font-weight: bold; margin-right: 63%">我的订单</span>
         <navigator class="navigator" url="/pagesOrder/list/list?type=0" hover-class="none">
           全部订单<text class="icon-right"></text>
         </navigator>
@@ -108,18 +217,23 @@ const test = ref(0);
     <!--我的消息-->
     <view class="message">
       <view class="title">
-        <span style="font-weight: bold;margin-right:63%">我的消息</span>
-        <navigator class="navigator" url="" hover-class="none" style="padding-top: 5rpx;">
+        <span style="font-weight: bold; margin-right: 63%">我的消息</span>
+        <navigator class="navigator" url="" hover-class="none" style="padding-top: 5rpx">
           全部消息
           <text class="icon-right"></text>
         </navigator>
       </view>
     </view>
-      <!-- 我的骑行 -->
+    <!-- 我的骑行 -->
     <view class="riding">
       <view class="title">
-        <span style="font-weight: bold;margin-right:63%">我的骑行</span>
-        <navigator class="navigator" url="/pagesMember/myRiding/myRiding" hover-class="none" style="padding-top: 5rpx;">
+        <span style="font-weight: bold; margin-right: 63%">我的骑行</span>
+        <navigator
+          class="navigator"
+          url="/pagesMember/myRiding/myRiding"
+          hover-class="none"
+          style="padding-top: 5rpx"
+        >
           全部骑行
           <text class="icon-right"></text>
         </navigator>
@@ -135,15 +249,15 @@ page {
   background-color: #f7f7f8;
 }
 
-.viewport::before{
-  content:"";
+.viewport::before {
+  content: '';
   position: absolute;
-  top:0;
-  left:0;
-  right:0;
-  height:34%;
-  background: linear-gradient(to bottom, rgba(189, 17, 78,0.8), rgba(255, 255, 255, 0));
-  z-index:1;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 34%;
+  background: linear-gradient(to bottom, rgba(189, 17, 78, 0.8), rgba(255, 255, 255, 0));
+  z-index: 1;
   pointer-events: none;
 }
 
@@ -158,7 +272,7 @@ page {
 .profile {
   margin-top: 100rpx;
   position: relative;
-  z-index:98;
+  z-index: 98;
 
   .overview {
     display: flex;
@@ -192,7 +306,6 @@ page {
     max-width: 180rpx;
     margin-bottom: 16rpx;
     font-size: 30rpx;
-
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
@@ -232,27 +345,30 @@ page {
   border-radius: 10rpx;
   box-shadow: 0 4rpx 6rpx rgba(240, 240, 240, 0.6);
   display: flex;
+  align-items: center;
+  justify-content: center;
   .content {
     width: 100%;
-    display:flex;
+    display: flex;
     flex-direction: row;
+    align-items: center;
+    justify-content: center;
   }
   .navigator {
     display: flex;
     flex-direction: column;
     color: #000000;
     text-align: center;
-    margin: 0 45rpx;
-    .number{
-      font-size:40rpx;
-      margin-bottom:5rpx
+    margin: 0 30rpx;
+    .number {
+      font-size: 40rpx;
+      margin-bottom: 5rpx;
     }
-    .text{
-      font-size:20rpx;
+    .text {
+      font-size: 20rpx;
     }
   }
 }
-
 
 /* 我的订单 */
 .orders {
@@ -331,7 +447,7 @@ page {
   }
 }
 
-.riding{
+.riding {
   position: relative;
   z-index: 99;
   padding: 30rpx;
@@ -355,4 +471,17 @@ page {
   }
 }
 
+.logout {
+  display: flex;
+  flex-direction: row;
+  color: rgba(255, 255, 255, 0.8);
+  border: 1rpx solid rgba(255, 255, 255, 0.8);
+  align-items: center;
+  justify-content: center;
+  border-radius: 20rpx;
+  height: 40rpx;
+  font-size: 24rpx;
+  width: 60rpx;
+  margin: 5rpx 40rpx;
+}
 </style>

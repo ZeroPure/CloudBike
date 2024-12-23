@@ -1,8 +1,34 @@
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed,watch } from 'vue'
 import { onLoad } from '@dcloudio/uni-app'
+import { getOrderListAPI } from '@/services/order'
+import { putOrderCancelAPI } from '@/services/order'
+import type { OrderCancelParams } from '@/services/order'
+import type { OrderParams } from '@/services/order'
+import type { OrderResult } from '@/services/order'
+
 
 const activeIndex = ref(0)
+const orderParams = ref<OrderParams>({
+  category: activeIndex.value,
+})
+const orderCancelParams = ref<OrderCancelParams>({
+  id: 0,
+})
+const data = ref<Array<OrderResult>>([
+  {
+    id: 0,
+    number: '0',
+    name: '0',
+    images: Array<string>(),
+    type: 0,
+    count: 0,
+    createTime: '',
+    pickTime: '',
+    payment: 0,
+    status: 0,
+  },
+])
 // tabs 数据
 const orderTabs = [
   { orderState: 0, title: '待付款', isRender: false },
@@ -14,41 +40,40 @@ const orderTabs = [
   { orderState: 6, title: '全部', isRender: false },
 ]
 
-// 模拟数据
-const data = [
-  {
-    id: 1,
-    number: '123456789',
-    name: 'jb',
-    images: [
-      'https://img0.baidu.com/it/u=2341097482,2639203366&fm=253&fmt=auto&app=138&f=JPEG?w=800&h=1067',
-    ],
-    type: 0, // 0日租，1月租，2购买
-    count: 1,
-    createTime: '2022-01-01',
-    pickTime: '2023-01-01',
-    payment: 100,
-    status: 0, // 0待付款，1待提车，2租赁中，3已完成，4待归还，5已取消
-  },
-  {
-    id: 2,
-    number: '123456789',
-    name: 'nmsl',
-    images: [
-      'https://img0.baidu.com/it/u=2341097482,2639203366&fm=253&fmt=auto&app=138&f=JPEG?w=800&h=1067',
-    ],
-    type: 1, // 0日租，1月租，2购买
-    count: 1,
-    createTime: '2022-01-01',
-    pickTime: '2023-01- 01',
-    payment: 100,
-    status: 1, // 0待付款，1待提车，2租赁中，3已完成，4待归还，5已取消，6全部
-  },
-]
-
-onLoad(() => {
+onLoad(async () => {
   // 初始调用api渲染订单
+  getOrderList()
 })
+
+watch(activeIndex, async (newValue) => {
+  orderParams.value.category = newValue
+  getOrderList()
+})
+
+const getOrderList = async () => {
+  console.log(orderParams.value)
+  const ListResponse = await getOrderListAPI(orderParams.value)
+  console.log('订单列表数据：', ListResponse)
+  if (ListResponse && ListResponse.code === 1) {
+    data.value = ListResponse.data
+    console.log('成功')
+  } else {
+    console.log('失败')
+  }
+}
+
+const cancelOrder = async (id: number) => {
+  orderCancelParams.value.id = id
+  const response = await putOrderCancelAPI(orderCancelParams.value)
+  if(response && response.code === 1){
+    console.log('取消订单成功',response)
+    //getOrderList()
+  }
+  else{
+    console.log('取消订单失败',response)
+    uni.showToast({title: '取消订单失败',icon: 'error'})
+  }
+}
 
 // 计算属性，将status映射为title
 const getStatusTitle = computed(() => (status: number) => {
@@ -87,10 +112,10 @@ const getStatusTitle = computed(() => (status: number) => {
           </view>
         </view>
         <view class="bottom">
-          <text class="time">{{ item.createTime }}</text>
-          <view class="cancel">取消订单</view>
+          <text class="time">订单创办时间: {{ item.createTime }}</text>
+          <view class="cancel" v-if="item.status === 0" @tap="cancelOrder(item.id)">取消订单</view>
           <!-- 跳转到详情页（要传订单id） -->
-          <navigator :url="`/pagesOrder/create/create?id=${item.id}`" class="detail"
+          <navigator v-if="item.status === 0" :url="`/pagesOrder/create/create?id=${item.id}`" class="detail"
             >去付款</navigator
           >
         </view>
@@ -139,9 +164,10 @@ page {
   .content {
     margin-left: 10rpx;
     .name {
+      max-width: 250rpx;
       font-size: 30rpx;
       font-weight: bold;
-      margin-right: 300rpx;
+      margin-right: 200rpx;
     }
   }
   .image {
@@ -157,31 +183,30 @@ page {
       font-size: 25rpx;
       color: #ff9900;
     }
-    .number{
+    .number {
       font-size: 25rpx;
       color: #7f7f7f;
     }
-    .payment{
+    .payment {
       margin-top: 50rpx;
       margin-left: 300rpx;
       font-size: 30rpx;
       font-weight: bold;
       color: #000000;
     }
-
   }
   .bottom {
     display: flex;
     flex-direction: row;
     margin: 20rpx 20rpx;
-    .cancel{
+    .cancel {
       font-size: 25rpx;
       color: #7f7f7f;
       margin-right: 50rpx;
     }
-    .time{
+    .time {
       font-size: 25rpx;
-      margin-right: 250rpx;
+      margin-right: 200rpx;
     }
   }
 }
